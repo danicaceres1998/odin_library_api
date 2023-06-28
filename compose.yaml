@@ -1,0 +1,49 @@
+version: "3"
+services:
+  server:
+    # image: odinapi:dev-env
+    image: node:20-buster
+    command: bash -c "while true; do sleep 100; done"
+    working_dir: /usr/src/app
+    build:
+      context: .
+    secrets:
+      - db-password
+    environment:
+      DB_USER: postgres
+      DB_PASSWORD_FILE: /run/secrets/db-password
+      DB_HOST: db
+    volumes:
+      - .:/usr/src/app
+    ports:
+      - 3000:3000
+      - 9229:9229
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:15.3-alpine
+    restart: always
+    user: postgres
+    secrets:
+      - db-password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db-password
+    expose:
+      - 5432
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  db-data:
+secrets:
+  db-password:
+    file: db/password.txt
+
